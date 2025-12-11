@@ -4,8 +4,8 @@ from pathlib import Path
 import requests
 
 # params
-DATASET_SLUG = "bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2023"
-YEAR_START, YEAR_END = 2005, 2023
+DATASET_SLUG = "bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024"
+YEAR_START, YEAR_END = 2005, 2024
 TABLES = ("caracteristiques", "lieux", "usagers", "vehicules")
 API_BASE = "https://www.data.gouv.fr/api/1"
 OUT_DIR = Path(__file__).resolve().parents[2] / "data" / "raw"
@@ -25,7 +25,7 @@ def pick_resources(dataset: dict):
         title = (res.get("title") or res.get("name") or "").lower()
         if fmt != "csv":
             continue
-        # detecte année
+        # detecte l'année
         m = re.search(r"(20\d{2}|19\d{2})", title)
         year = int(m.group(1)) if m else None
         if year not in years:
