@@ -455,6 +455,28 @@ def build_range(start_year: int, end_year: int) -> None:
     for y in range(start_year, end_year + 1):
         build_year(y)
 
+def load_cleaned_range(start_year: int, end_year: int) -> pd.DataFrame:
+    """
+    Charge tous les fichiers cleaned accidents_<year>.csv
+    entre start_year et end_year inclus, et retourne un seul DataFrame.
+    """
+    frames: list[pd.DataFrame] = []
+
+    for y in range(start_year, end_year + 1):
+        path = CLEAN_DIR / f"accidents_{y}.csv"
+        if not path.exists():
+            print(f"[WARN] Fichier nettoyé manquant pour {y}: {path}")
+            continue
+        df_y = pd.read_csv(path)
+        frames.append(df_y)
+
+    if not frames:
+        raise FileNotFoundError(
+            f"Aucun fichier nettoyé trouvé entre {start_year} et {end_year} dans {CLEAN_DIR}"
+        )
+
+    return pd.concat(frames, ignore_index=True)
+
 
 if __name__ == "__main__":
     years = _find_year_dirs()
