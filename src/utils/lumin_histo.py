@@ -5,9 +5,10 @@ from pathlib import Path
 import os
 
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.io as pio
 
-from clean_data import load_cleaned_range
+from .clean_data import load_cleaned_range
 
 
 OUTPUT_PATH = Path(__file__).resolve().parents[2] / "static" / "img" / "luminosite.png"
@@ -16,35 +17,30 @@ OUTPUT_PATH = Path(__file__).resolve().parents[2] / "static" / "img" / "luminosi
 def generate_luminosite_histogram(
     start_year: int = 2005,
     end_year: int = 2024,
-    output_path: Path | str = OUTPUT_PATH,
 ) -> str:
-    # 1) Charger toutes les années déjà nettoyées
+    """
+    Charge les données nettoyées et renvoie un fragment HTML Plotly (div + script)
+    représentant l'histogramme de la luminosité. Le fragment inclut la
+    référence à Plotly via le CDN pour être inséré directement dans une page.
+    """
     df: pd.DataFrame = load_cleaned_range(start_year, end_year)
 
-    # 2) On utilise la colonne "luminosite" créée dans le clean
     if "luminosite" not in df.columns:
         raise KeyError("La colonne 'luminosite' n'existe pas dans les données nettoyées.")
 
-    lumi = df["luminosite"].dropna()
+    counts = df["luminosite"].dropna().value_counts().sort_index()
+    if counts.empty:
+        # Retourne un petit message HTML si pas de données
+        return f"<p>Aucune donnée de luminosité entre {start_year} et {end_year}.</p>"
 
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # 3) Générer l'histogramme
-    fig, ax = plt.subplots(figsize=(8, 5))
-    (
-        lumi.value_counts()
-        .sort_index()
-        .plot(kind="bar", ax=ax)
+    fig = px.bar(
+        x=counts.index.astype(str),
+        y=counts.values,
+        labels={"x": "Luminosité", "y": "Nombre d'accidents"},
+        title=f"Répartition des accidents selon la luminosité ({start_year}-{end_year})",
     )
+    fig.update_layout(xaxis_tickangle=30)
 
-    ax.set_title(f"Répartition des accidents selon la luminosité ({start_year}-{end_year})")
-    ax.set_xlabel("Luminosité")
-    ax.set_ylabel("Nombre d'accidents")
-    plt.xticks(rotation=30, ha="right")
-
-    fig.tight_layout()
-    fig.savefig(output_path)
-    plt.close(fig)
-
-    return str(output_path)
+    # Génère un fragment HTML (div + script) utilisant le CDN Plotly
+    html_fragment = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
+    return html_fragment

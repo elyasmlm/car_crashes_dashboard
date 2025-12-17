@@ -1,10 +1,9 @@
 from pathlib import Path
 from src.utils.lumin_histo import generate_luminosite_histogram
 
-def generate_homepage():
-    img_path = generate_luminosite_histogram(2005, 2024)
 
-    img_rel = Path(img_path).as_posix()
+def generate_homepage():
+    plot_html = generate_luminosite_histogram(2005, 2024)
 
     html = f"""
     <!DOCTYPE html>
@@ -17,7 +16,7 @@ def generate_homepage():
         <h1>Dashboard des accidents</h1>
 
         <h2>Histogramme de la luminosité</h2>
-        <img src="{img_rel}" alt="Histogramme luminosité" style="max-width:600px;">
+        {plot_html}
 
     </body>
     </html>
@@ -28,6 +27,7 @@ def generate_homepage():
 
     print(f"[OK] Homepage générée → {out_file.absolute()}")
     print("Ouvre-la dans ton navigateur (double-clique).")
+
 
 if __name__ == "__main__":
     generate_homepage()
