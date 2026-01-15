@@ -1,33 +1,17 @@
-from pathlib import Path
-from src.utils.lumin_histo import generate_luminosite_histogram
+import dash
+from dash import html, dcc
 
+from src.components.histogramme.lumin_histo import generate_luminosite_histogram
 
-def generate_homepage():
-    plot_html = generate_luminosite_histogram(2005, 2024)
+dash.register_page(__name__, path="/", name="Accueil")
 
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Dashboard Accidents</title>
-    </head>
-    <body>
-        <h1>Dashboard des accidents</h1>
-
-        <h2>Histogramme de la luminosité</h2>
-        {plot_html}
-
-    </body>
-    </html>
-    """
-
-    out_file = Path("homepage.html")
-    out_file.write_text(html, encoding="utf-8")
-
-    print(f"[OK] Homepage générée → {out_file.absolute()}")
-    print("Ouvre-la dans ton navigateur (double-clique).")
-
-
-if __name__ == "__main__":
-    generate_homepage()
+def layout():
+    fig = generate_luminosite_histogram(2005, 2023)
+    return html.Div(
+        [
+            html.H1("Dashboard des accidents"),
+            html.H2("Histogramme de la luminosité"),
+            dcc.Graph(figure=fig),
+        ],
+        style={"padding": "16px"},
+    )
