@@ -162,9 +162,15 @@ def _norm_coords(df: pd.DataFrame) -> pd.DataFrame:
         if col.lower() in ("long", "lon") and col != "long":
             df = df.rename(columns={col: "long"})
 
+    def _to_float_fr(s: pd.Series) -> pd.Series:
+        s = s.astype("string").str.strip()
+        s = s.str.replace(" ", "", regex=False)
+        s = s.str.replace(",", ".", regex=False)
+        return pd.to_numeric(s, errors="coerce")
+
     for c in ("lat", "long"):
         if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
+            df[c] = _to_float_fr(df[c])
             df.loc[df[c] == 0, c] = np.nan
             med = df[c].dropna().abs().median()
             if med > 1000:
