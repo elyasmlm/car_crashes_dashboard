@@ -23,7 +23,7 @@ def load_cleaned_year(year: int) -> pd.DataFrame:
     path = CLEAN_DIR / f"accidents_{year}.csv"
     if not path.exists():
         raise FileNotFoundError(f"Fichier introuvable: {path}")
-    return pd.read_csv(path)
+    return pd.read_csv(path, low_memory=False)
 
 
 def load_cleaned_range(start_year: int, end_year: int) -> pd.DataFrame:
