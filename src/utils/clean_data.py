@@ -524,7 +524,7 @@ def load_cleaned_range(start_year: int, end_year: int) -> pd.DataFrame:
         if not path.exists():
             print(f"[WARN] Fichier nettoyé manquant pour {y}: {path}")
             continue
-        df_y = pd.read_csv(path)
+        df_y = pd.read_csv(path, low_memory=False)
         frames.append(df_y)
 
     if not frames:

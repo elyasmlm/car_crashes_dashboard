@@ -8,7 +8,7 @@ from src.components.gridmap.accidents_gridmap import build_grid_map
 from src.utils.data_loader import available_years, load_cleaned_range
 
 
-dash.register_page(__name__, path="/gridmap", name="Carte (grille)")
+dash.register_page(__name__, path="/gridmap", name="Carte des accidents")
 YEARS = available_years()
 DEFAULT_START = YEARS[0] if YEARS else 2005
 DEFAULT_END = YEARS[-1] if YEARS else 2024
