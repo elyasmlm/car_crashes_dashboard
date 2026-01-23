@@ -66,6 +66,27 @@ MAP_COL = {
     7: "Sans collision",
 }
 
+def catv_to_group(catv) -> str:
+    if pd.isna(catv):
+        return "inconnu"
+    try:
+        c = int(catv)
+    except Exception:
+        return "inconnu"
+
+    if c in {3, 7}:
+        return "voiture"
+
+    if c in {1, 2, 30, 31, 32, 33, 34, 35, 36, 41, 42, 43, 50, 60, 80}:
+        return "deux_roues"
+
+    if c in {10, 13, 14, 15, 16, 17, 20, 21}:
+        return "utilitaire_camion"
+
+    if c in {37, 38, 39, 40}:
+        return "transport_commun"
+
+    return "autre"
 
 # ==========================
 #  Fonctions utilitaires
@@ -135,67 +156,17 @@ def _ensure_num_acc(df: pd.DataFrame, strict: bool = True) -> pd.DataFrame:
     df["Num_Acc"] = df["Num_Acc"].astype("string")
     return df
 
-def _normalize_vehicules_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalise les noms de colonnes des fichiers VEHICULES
-    (notamment pour 2021 où le schéma diffère).
-    """
-    rename_map = {}
-
-    for c in df.columns:
-        cl = c.lower().strip()
-
-        if cl in ("id_accident"):
-            rename_map[c] = "Num_Acc"
-
-        elif cl in ("id_veh", "idveh", "veh_id"):
-            rename_map[c] = "id_vehicule"
-
-        elif cl in ("catv", "categorie_vehicule"):
-            rename_map[c] = "catv"
-
-    if rename_map:
-        df = df.rename(columns=rename_map)
-
-    return df
-
-
 
 def _parse_hrmn(v) -> tuple[float, float]:
-    """
-    hrmn peut être:
-    - HHMM (230 -> 02:30, 1845 -> 18:45)
-    - HH:MM ("07:32")
-    """
+    """hrmn = HHMM (230 -> 02:30, 1845 -> 18:45)."""
     if pd.isna(v):
         return (np.nan, np.nan)
-
-    s = str(v).strip().strip('"').strip("'")
-    if not s:
-        return (np.nan, np.nan)
-
-    if ":" in s:
-        parts = s.split(":")
-        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
-            try:
-                hh = int(parts[0])
-                mm = int(parts[1])
-                if 0 <= hh <= 23 and 0 <= mm <= 59:
-                    return (float(hh), float(mm))
-            except Exception:
-                return (np.nan, np.nan)
-        return (np.nan, np.nan)
-
+    s = str(v).strip()
     if not s.isdigit():
         return (np.nan, np.nan)
-
     s = s.zfill(4)
     try:
-        hh = int(s[:2])
-        mm = int(s[2:])
-        if 0 <= hh <= 23 and 0 <= mm <= 59:
-            return (float(hh), float(mm))
-        return (np.nan, np.nan)
+        return float(s[:2]), float(s[2:])
     except Exception:
         return (np.nan, np.nan)
 
@@ -212,15 +183,9 @@ def _norm_coords(df: pd.DataFrame) -> pd.DataFrame:
         if col.lower() in ("long", "lon") and col != "long":
             df = df.rename(columns={col: "long"})
 
-    def _to_float_fr(s: pd.Series) -> pd.Series:
-        s = s.astype("string").str.strip()
-        s = s.str.replace(" ", "", regex=False)
-        s = s.str.replace(",", ".", regex=False)
-        return pd.to_numeric(s, errors="coerce")
-
     for c in ("lat", "long"):
         if c in df.columns:
-            df[c] = _to_float_fr(df[c])
+            df[c] = pd.to_numeric(df[c], errors="coerce")
             df.loc[df[c] == 0, c] = np.nan
             med = df[c].dropna().abs().median()
             if med > 1000:
@@ -340,6 +305,57 @@ def _agg_usagers(usagers: pd.DataFrame) -> pd.DataFrame:
     )
     return agg
 
+def _agg_conducteurs_2(usagers: pd.DataFrame, vehicules: pd.DataFrame, year: int) -> pd.DataFrame:
+    u = _ensure_num_acc(usagers.copy(), strict=False)
+    v = _ensure_num_acc(vehicules.copy(), strict=False)
+
+    if "Num_Acc" not in u.columns:
+        return pd.DataFrame(
+            columns=["Num_Acc", "age_cond_1", "age_cond_2", "veh_type_cond_1", "veh_type_cond_2"]
+        )
+
+    u["catu"] = pd.to_numeric(u.get("catu"), errors="coerce")
+    drivers = u[u["catu"] == 1].copy()
+    if drivers.empty:
+        return pd.DataFrame(columns=["Num_Acc", "age_cond_1", "age_cond_2", "veh_type_cond_1", "veh_type_cond_2"])
+    drivers["an_nais"] = pd.to_numeric(drivers.get("an_nais"), errors="coerce")
+    drivers["age"] = year - drivers["an_nais"]
+    drivers.loc[(drivers["age"] <= 0) | (drivers["age"] > 100), "age"] = np.nan
+
+    join_keys = None
+    if "id_vehicule" in drivers.columns and "id_vehicule" in v.columns:
+        join_keys = ["Num_Acc", "id_vehicule"]
+    elif "num_veh" in drivers.columns and "num_veh" in v.columns:
+        join_keys = ["Num_Acc", "num_veh"]
+
+    if join_keys and "catv" in v.columns:
+        v["catv"] = pd.to_numeric(v["catv"], errors="coerce")
+        drivers = drivers.merge(v[join_keys + ["catv"]], on=join_keys, how="left")
+        drivers["veh_type"] = drivers["catv"].apply(catv_to_group)
+    else:
+        drivers["veh_type"] = np.nan
+
+    drivers["cond_idx"] = drivers.groupby("Num_Acc").cumcount() + 1
+    drivers = drivers[drivers["cond_idx"] <= 2]
+
+    if drivers.empty:
+        return pd.DataFrame(columns=["Num_Acc", "age_cond_1", "age_cond_2", "veh_type_cond_1", "veh_type_cond_2"])
+
+    out = (
+        drivers.pivot(
+            index="Num_Acc",
+            columns="cond_idx",
+            values=["age", "veh_type"]
+        )
+    )
+
+    out.columns = [
+        "age_cond_1", "age_cond_2",
+        "veh_type_cond_1", "veh_type_cond_2"
+    ]
+    out = out.reset_index()
+
+    return out
 
 def _agg_vehicules(vehicules: pd.DataFrame) -> pd.DataFrame:
     """Agrège la table VEHICULES par Num_Acc, en nb_vehicules."""
@@ -356,7 +372,6 @@ def _agg_vehicules(vehicules: pd.DataFrame) -> pd.DataFrame:
           .rename(columns={"size": "nb_vehicules"})
     )
     return agg
-
 
 def _find_csv(year_dir: Path, keyword: str) -> Path | None:
     """Premier CSV du dossier contenant keyword (ou une abréviation)."""
@@ -398,6 +413,8 @@ def build_year(year: int) -> Path | None:
         return None
     car = _read_csv_any(f_car)
     car = _ensure_num_acc(car, strict=True)
+    vehicules = None
+    usagers = None
 
     # LIEUX
     f_lieux = _find_csv(year_dir, "lieux")
@@ -425,6 +442,7 @@ def build_year(year: int) -> Path | None:
             car["nb_blesses_hosp"] = np.nan
             car["nb_blesses_legers"] = np.nan
     else:
+        usagers = None
         car["nb_usagers"] = np.nan
         car["nb_indemnes"] = np.nan
         car["nb_tues"] = np.nan
@@ -435,7 +453,6 @@ def build_year(year: int) -> Path | None:
     f_veh = _find_csv(year_dir, "vehicules")
     if f_veh:
         veh_raw = _read_csv_any(f_veh)
-        veh_raw = _normalize_vehicules_columns(veh_raw)
         vehicules = _ensure_num_acc(veh_raw, strict=False)
         if "Num_Acc" in vehicules.columns:
             agg_v = _agg_vehicules(vehicules)
@@ -444,7 +461,18 @@ def build_year(year: int) -> Path | None:
             print(f"[WARN] {year}: table VEHICULES ignorée (pas de Num_Acc exploitable).")
             car["nb_vehicules"] = np.nan
     else:
+        vehicules = None
         car["nb_vehicules"] = np.nan
+
+    #CONDUCTEURS ET TYPE DE VEHICULES
+    if usagers is not None and vehicules is not None:
+        conds = _agg_conducteurs_2(usagers, vehicules, year)
+        car = car.merge(conds, on="Num_Acc", how="left")
+    else:
+        car["age_cond_1"] = np.nan
+        car["age_cond_2"] = np.nan
+        car["veh_type_cond_1"] = np.nan
+        car["veh_type_cond_2"] = np.nan
 
     # Colonnes d'intérêt (CARACTERISTIQUES + LIEUX + agrégés)
     cols_car = [
@@ -460,6 +488,7 @@ def build_year(year: int) -> Path | None:
         "nb_vehicules", "nb_usagers",
         "nb_indemnes", "nb_tues",
         "nb_blesses_hosp", "nb_blesses_legers",
+        "age_cond_1", "age_cond_2", "veh_type_cond_1", "veh_type_cond_2",
     ]
 
     keep = [c for c in cols_car + cols_lieux + cols_agg if c in car.columns]
@@ -489,6 +518,7 @@ def build_year(year: int) -> Path | None:
         "catr", "circ", "nbv", "vosp", "prof", "plan", "surf", "infra", "situ", "vma",
         "nb_vehicules", "nb_usagers", "nb_indemnes",
         "nb_tues", "nb_blesses_hosp", "nb_blesses_legers",
+        "age_cond_1", "age_cond_2", "veh_type_cond_1", "veh_type_cond_2",
         "lum_code", "agg_code", "int_code", "atm_code", "col_code",
     ]
     df = df[[c for c in final_cols if c in df.columns]].copy()
