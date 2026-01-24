@@ -3,29 +3,22 @@ from __future__ import annotations
 import pandas as pd
 import plotly.express as px
 
-from src.utils.clean_data import load_cleaned_range
-
-def generate_meteo_histogram(
-    start_year: int = 2005,
-    end_year: int = 2024,
-):
+def generate_meteo_histogram(df: pd.DataFrame):
     """
     Retourne une figure Plotly pour être affichée dans Dash via dcc.Graph.
     """
-    df: pd.DataFrame = load_cleaned_range(start_year, end_year)
-
     if "meteo" not in df.columns:
         raise KeyError("La colonne 'meteo' n'existe pas dans les données nettoyées.")
 
     counts = df["meteo"].dropna().value_counts().sort_index()
     if counts.empty:
-        return px.bar(title=f"Aucune donnée de meteo entre {start_year} et {end_year}.")
+        return px.bar(title=f"Aucune donnée de meteo entre 2005 et 2024.")
 
     fig = px.bar(
         x=counts.index.astype(str),
         y=counts.values,
         labels={"x": "Météo", "y": "Nombre d'accidents"},
-        title=f"Répartition des accidents selon la météo ({start_year}-{end_year})",
+        title=f"Répartition des accidents selon la météo (2005-2024)",
     )
     fig.update_layout(xaxis_tickangle=30)
     return fig
