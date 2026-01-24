@@ -9,6 +9,7 @@ from src.components.camembert.saison_cam import generate_seasons_pie
 from src.components.camembert.type_collision_cam import generate_collisions_pie
 from src.components.camembert.consequences_cam import generate_gravite_usagers_pie
 from src.components.camembert.type_vehicules_cam import generate_vehicle_types_pie
+from src.components.evolution.evolution_per_year import generate_accidents_per_year_line
 from src.utils.clean_data import load_cleaned_range
 
 dash.register_page(__name__, path="/", name="Accueil")
@@ -25,6 +26,8 @@ def layout():
     camembert2 = generate_collisions_pie(datas)
     camembert3 = generate_gravite_usagers_pie(datas)
     camembert4 = generate_vehicle_types_pie(datas)
+
+    evolution = generate_accidents_per_year_line(datas)
 
     histogrammes = [
         {"title": "Histogramme de la luminosité", "fig": histo},
@@ -89,6 +92,13 @@ def layout():
                 ],
                 style={"padding": "16px"},
             ),
+            html.Div(
+            [
+                html.H2("Évolution du nombre d'accidents par année"),
+                dcc.Graph(figure=evolution),
+            ],
+            style={"padding": "16px"}
+        ),
         ]
     )
 
