@@ -19,8 +19,8 @@ layout = html.Div(
     [
         html.Div(
             [
-                html.H2("Exploration géographique", className="page-title"),
-                html.Div("Filtre, compare et visualise la densité d’accidents.", className="page-subtitle"),
+                html.H2("Exploration géographique", className="page-title text-center"),
+                html.Div("Filtre, compare et visualise la densité d’accidents.", className="page-subtitle text-center"),
             ],
             className="mb-3"
         ),
