@@ -92,6 +92,31 @@ def catv_to_group(catv) -> str:
 #  Fonctions utilitaires
 # ==========================
 
+
+def _normalize_vehicules_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalise les noms de colonnes des fichiers VEHICULES
+    (notamment pour 2021 où le schéma diffère).
+    """
+    rename_map = {}
+
+    for c in df.columns:
+        cl = c.lower().strip()
+
+        if cl in ("id_accident"):
+            rename_map[c] = "Num_Acc"
+
+        elif cl in ("id_veh", "idveh", "veh_id"):
+            rename_map[c] = "id_vehicule"
+
+        elif cl in ("catv", "categorie_vehicule"):
+            rename_map[c] = "catv"
+
+    if rename_map:
+        df = df.rename(columns=rename_map)
+
+    return df
+
 def _find_year_dirs() -> list[int]:
     years: list[int] = []
     if RAW_DIR.exists():
@@ -158,17 +183,37 @@ def _ensure_num_acc(df: pd.DataFrame, strict: bool = True) -> pd.DataFrame:
 
 
 def _parse_hrmn(v) -> tuple[float, float]:
-    """hrmn = HHMM (230 -> 02:30, 1845 -> 18:45)."""
-    if pd.isna(v):
+    """
+    hrmn peut être:
+    - HHMM (230 -> 02:30, 1845 -> 18:45)
+    - HH:MM ("07:32")
+    """
+    s = str(v).strip().strip('"').strip("'")
+    if not s:
         return (np.nan, np.nan)
-    s = str(v).strip()
-    if not s.isdigit():
+
+    if ":" in s:
+        parts = s.split(":")
+        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+            try:
+                hh = int(parts[0])
+                mm = int(parts[1])
+                if 0 <= hh <= 23 and 0 <= mm <= 59:
+                    return (float(hh), float(mm))
+            except Exception:
+                return (np.nan, np.nan)
         return (np.nan, np.nan)
+
     s = s.zfill(4)
     try:
-        return float(s[:2]), float(s[2:])
+        hh = int(s[:2])
+        mm = int(s[2:])
+        if 0 <= hh <= 23 and 0 <= mm <= 59:
+            return (float(hh), float(mm))
+        return (np.nan, np.nan)
     except Exception:
         return (np.nan, np.nan)
+
 
 
 def _norm_coords(df: pd.DataFrame) -> pd.DataFrame:
@@ -183,9 +228,15 @@ def _norm_coords(df: pd.DataFrame) -> pd.DataFrame:
         if col.lower() in ("long", "lon") and col != "long":
             df = df.rename(columns={col: "long"})
 
+    def _to_float_fr(s: pd.Series) -> pd.Series:
+        s = s.astype("string").str.strip()
+        s = s.str.replace(" ", "", regex=False)
+        s = s.str.replace(",", ".", regex=False)
+        return pd.to_numeric(s, errors="coerce")
+
     for c in ("lat", "long"):
         if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
+            df[c] = _to_float_fr(df[c])
             df.loc[df[c] == 0, c] = np.nan
             med = df[c].dropna().abs().median()
             if med > 1000:
@@ -453,6 +504,7 @@ def build_year(year: int) -> Path | None:
     f_veh = _find_csv(year_dir, "vehicules")
     if f_veh:
         veh_raw = _read_csv_any(f_veh)
+        veh_raw = _normalize_vehicules_columns(veh_raw)
         vehicules = _ensure_num_acc(veh_raw, strict=False)
         if "Num_Acc" in vehicules.columns:
             agg_v = _agg_vehicules(vehicules)

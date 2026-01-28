@@ -15,6 +15,7 @@ from dash import (
     Output,
     ClientsideFunction,
 )
+import dash_bootstrap_components as dbc 
 from flask_caching import Cache
 
 from src.utils.sytadin_live import fetch_sytadin_evenements_xml, parse_live_accidents
@@ -36,16 +37,6 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * c
 
 
-def _badge_style() -> dict:
-    return {
-        "padding": "6px 10px",
-        "border": "1px solid #ddd",
-        "borderRadius": "10px",
-        "background": "#fff",
-        "whiteSpace": "nowrap",
-    }
-
-
 def create_app() -> Dash:
     app = Dash(
         __name__,
@@ -53,6 +44,12 @@ def create_app() -> Dash:
         pages_folder="src/pages",
         suppress_callback_exceptions=True,
         title="Car Crashes Dashboard",
+        external_stylesheets=[
+            dbc.themes.MORPH,
+            dbc.icons.BOOTSTRAP,
+            "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+        ]
+
     )
 
     cache = Cache(
@@ -73,7 +70,6 @@ def create_app() -> Dash:
     @cache.memoize(timeout=30 * 24 * 3600)  # 30 jours
     def _get_segment_index_cached() -> dict:
         if not SEG_MIF.exists() or not SEG_MID.exists():
-            # Pas de géométrie dispo -> pas de distance possible
             return {}
         return build_segment_index_from_mif_mid(SEG_MIF, SEG_MID)
 
@@ -121,47 +117,47 @@ def create_app() -> Dash:
         Input("user-geo", "data"),
     )
     def update_live_accidents_header(_, user_geo):
-        def _render(text: str):
-            return html.Div(html.Strong(text), style=_badge_style())
+        # Utilisation de Badges Bootstrap pour le style
+        def _render(n_acc, addr, dist):
+            color = "success" if n_acc == 0 else "danger"
+            return html.Div([
+                dbc.Badge(f"Accidents en cours : {n_acc}", color=color, className="me-2 p-2"),
+                dbc.Badge(f"Votre position : {addr}", color="secondary", className="me-2 p-2"),
+                dbc.Badge(f"Accident le plus proche : {dist}", color="info", className="p-2"),
+            ], className="d-flex align-items-center flex-wrap gap-2")
 
         try:
             accidents = _get_live_accidents_cached()
             n = len(accidents)
         except Exception as e:
             print("[LIVE] erreur _get_live_accidents_cached:", repr(e))
-            return _render("Accidents en cours : indisponible")
+            return _render("?", "Indisponible", "Indisponible")
 
         # Géoloc non dispo / refusée
         if not user_geo or not isinstance(user_geo, dict) or not user_geo.get("ok"):
-            msg = user_geo.get("error") if isinstance(user_geo, dict) else None
-            base = f"Accidents en temps réel : {n} | Votre position : Indisponible | Distance de l'accident le plus proche : Indisponible"
-            if msg:
-                base = f"{base} ({msg})"
-            return _render(base)
+            return _render(n, "Indisponible", "Indisponible")
 
         # Cast coords utilisateur
         try:
             user_lat = float(user_geo.get("lat"))
             user_lon = float(user_geo.get("lon"))
         except Exception:
-            return _render(f"Accidents en temps réel : {n} | Votre position : Indisponible | Distance de l'accident le plus proche : Indisponible")
+            return _render(n, "Indisponible", "Indisponible")
 
-        # Votre position (best effort)
+        #  position user
         try:
             user_address = _reverse_geocode_cached(user_lat, user_lon)
         except Exception:
             user_address = None
         addr_txt = user_address if user_address else "Indisponible"
 
-        # Si aucun accident : distance indisponible (comme demandé)
         if n == 0:
-            return _render(f"Accidents en temps réel : 0 | Votre position : {addr_txt} | Distance de l'accident le plus proche : Indisponible")
+            return _render(0, addr_txt, "Aucun accident")
 
-        # Distance de l'accident le plus proche: nécessite geom segments + segment_id sur les accidents
+        # Distance
         seg_idx = _get_segment_index_cached()
-
         if not seg_idx:
-            return _render(f"Accidents en temps réel : {n} | Votre position : {addr_txt} | Distance de l'accident le plus proche : Indisponible")
+            return _render(n, addr_txt, "Indisponible")
 
         dists = []
         for a in accidents:
@@ -172,49 +168,53 @@ def create_app() -> Dash:
                 dists.append(d)
 
         if not dists:
-            return _render(
-                f"Accidents en temps réel : {n} | Votre position : {addr_txt} | Distance de l'accident le plus proche : Indisponible"
-            )
+            return _render(n, addr_txt, "Indisponible")
 
         dmin = min(dists)
-        return _render(f"Accidents en temps réel : {n} | Votre position : {addr_txt} | Distance de l'accident le plus proche : {dmin:.1f} km")
+        return _render(n, addr_txt, f"{dmin:.1f} km")
 
     # --------------------------------------------------
-    # Layout
+    # Layout avec Bootstrap Navbar
     # --------------------------------------------------
+    navbar = dbc.NavbarSimple(
+        children=[
+            dbc.NavItem(dbc.NavLink(page["name"], href=page["path"], active="exact"))
+            for page in page_registry.values()
+        ],
+        brand="Dashboard Accidents de la Route",
+        brand_href="/",
+        color="primary",
+        dark=True,
+        className="app-navbar mb-4",
+        sticky="top",
+    )
+
     app.layout = html.Div(
         [
-            html.Header(
+            dcc.Store(id="user-geo", storage_type="session"),
+            dcc.Interval(id="live-accidents-interval", interval=60_000, n_intervals=0),
+            
+            # Navigation principale
+            navbar,
+
+            # Conteneur principal avec marges
+            dbc.Container(
                 [
-                    html.H2("Accidents de la route en France", style={"margin": 0}),
-                    html.Nav(
-                        [
-                            dcc.Link(page["name"], href=page["path"], style={"marginRight": "12px"})
-                            for page in page_registry.values()
-                        ]
+                    dbc.Card(
+                        dbc.CardBody(
+                            id="live-accidents-header", 
+                            className="d-flex justify-content-center"
+                        ),
+                        className="mb-4 shadow-sm border-0 bg-light",
                     ),
-                    dcc.Store(id="user-geo", storage_type="session"),
-                    html.Div(
-                        id="live-accidents-header",
-                        style={
-                            "marginLeft": "auto",
-                            "display": "flex",
-                            "alignItems": "center",
-                            "gap": "10px",
-                        },
-                    ),
-                    dcc.Interval(id="live-accidents-interval", interval=60_000, n_intervals=0),
+                    
+                    # Contenu de la page
+                    html.Main(page_container),
                 ],
-                style={
-                    "padding": "12px 16px",
-                    "borderBottom": "1px solid #ddd",
-                    "display": "flex",
-                    "alignItems": "center",
-                    "gap": "16px",
-                },
-            ),
-            html.Main(page_container, style={"padding": "16px"}),
-        ]
+                fluid=True,
+                className="px-4 app-shell",
+            )
+        ],
     )
 
     return app
