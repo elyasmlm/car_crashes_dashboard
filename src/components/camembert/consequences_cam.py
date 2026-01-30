@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import plotly.express as px
 
+
 def generate_gravite_usagers_pie(df: pd.DataFrame):
     """
     Camembert : répartition des USAGERS par gravité (sommes sur la période).
@@ -25,13 +26,13 @@ def generate_gravite_usagers_pie(df: pd.DataFrame):
     })
 
     if pie_df["Nombre"].sum() == 0:
-        return px.pie(title=f"Aucune donnée de gravité entre 2005 et 2024.")
+        return px.pie(title="Aucune donnée de gravité entre 2005 et 2024.")
 
     fig = px.pie(
         pie_df,
         names="Gravité",
         values="Nombre",
-        title=f"Répartition des usagers par gravité (2005-2024)",
+        title="Répartition des usagers par gravité (2005-2024)",
     )
     fig.update_traces(textinfo="percent+label")
     return fig
