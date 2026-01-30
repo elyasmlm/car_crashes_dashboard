@@ -1,16 +1,15 @@
 import dash
-from dash import html, dcc, callback, Output, Input, State
 import dash_bootstrap_components as dbc
-
-from src.components.histogramme.lumin_histo import generate_luminosite_histogram
-from src.components.histogramme.meteo_histo import generate_meteo_histogram
-from src.components.histogramme.hours_histo import generate_hours_histogram
-from src.components.histogramme.age_histo import generate_age_histogram
+from dash import Input, Output, State, callback, dcc, html
+from src.components.camembert.consequences_cam import generate_gravite_usagers_pie
 from src.components.camembert.saison_cam import generate_seasons_pie
 from src.components.camembert.type_collision_cam import generate_collisions_pie
-from src.components.camembert.consequences_cam import generate_gravite_usagers_pie
 from src.components.camembert.type_vehicules_cam import generate_vehicle_types_pie
 from src.components.evolution.evolution_per_year import generate_accidents_per_year_line
+from src.components.histogramme.age_histo import generate_age_histogram
+from src.components.histogramme.hours_histo import generate_hours_histogram
+from src.components.histogramme.lumin_histo import generate_luminosite_histogram
+from src.components.histogramme.meteo_histo import generate_meteo_histogram
 from src.utils.clean_data import load_cleaned_range
 
 dash.register_page(__name__, path="/", name="Accueil")
@@ -155,7 +154,8 @@ def load_all_graphs_data(_):
     prevent_initial_call=True
 )
 def navigate_histo(prev_clicks, next_clicks, store):
-    if not store: return dash.no_update, dash.no_update, dash.no_update
+    if not store : 
+        return dash.no_update, dash.no_update, dash.no_update
     items = store["items"]
     idx = store["index"]
     ctx_id = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
@@ -176,7 +176,8 @@ def navigate_histo(prev_clicks, next_clicks, store):
     prevent_initial_call=True
 )
 def navigate_pie(prev_clicks, next_clicks, store):
-    if not store: return dash.no_update, dash.no_update, dash.no_update
+    if not store : 
+        return dash.no_update, dash.no_update, dash.no_update
     items = store["items"]
     idx = store["index"]
     ctx_id = dash.callback_context.triggered[0]['prop_id'].split('.')[0]

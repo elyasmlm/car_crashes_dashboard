@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import plotly.express as px
 
+
 def generate_age_histogram(df: pd.DataFrame):
     """
     Retourne une figure Plotly pour être affichée dans Dash via dcc.Graph.
@@ -22,15 +23,16 @@ def generate_age_histogram(df: pd.DataFrame):
 
     ages = ages[(ages > 17) & (ages <= 100)]
     if ages.empty:
-        return px.histogram(title=f"Aucune donnée d'âge conducteur valide entre 2005 et 2024.")
+        return px.histogram(title="Aucune donnée d'âge conducteur valide entre 2005 et 2024.")
 
     fig = px.histogram(
         ages,
         x=ages,
         nbins=100,
-        labels={"x": "Âge du conducteur", "y": "Nombre d'accidents"},
-        title=f"Répartition des âges des conducteurs (2005-2024)",
+        labels={"x": "Âge du conducteur"},
+        title="Répartition des âges des conducteurs (2005-2024)",
     )
+    fig.update_yaxes(title_text="Nombre d'accidentés")
     fig.update_layout(xaxis_tickangle=30)
 
     return fig

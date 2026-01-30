@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import plotly.express as px
 
+
 def generate_meteo_histogram(df: pd.DataFrame):
     """
     Retourne une figure Plotly pour être affichée dans Dash via dcc.Graph.
@@ -12,13 +13,13 @@ def generate_meteo_histogram(df: pd.DataFrame):
 
     counts = df["meteo"].dropna().value_counts().sort_index()
     if counts.empty:
-        return px.bar(title=f"Aucune donnée de meteo entre 2005 et 2024.")
+        return px.bar(title="Aucune donnée de meteo entre 2005 et 2024.")
 
     fig = px.bar(
         x=counts.index.astype(str),
         y=counts.values,
         labels={"x": "Météo", "y": "Nombre d'accidents"},
-        title=f"Répartition des accidents selon la météo (2005-2024)",
+        title="Répartition des accidents selon la météo (2005-2024)",
     )
     fig.update_layout(xaxis_tickangle=30)
     return fig

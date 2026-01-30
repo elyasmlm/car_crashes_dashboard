@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -130,14 +130,12 @@ def _read_csv_any(path: Path) -> pd.DataFrame:
     """Lecture robuste: teste plusieurs encodages et séparateurs."""
     encodings = ["utf-8", "latin-1", "cp1252"]
     seps = [";", ","]
-    last_error: Exception | None = None
 
     for enc in encodings:
         for sep in seps:
             try:
                 return pd.read_csv(path, sep=sep, engine="python", encoding=enc)
-            except Exception as e:
-                last_error = e
+            except Exception:
                 continue
 
     print(f"[WARN] Problème de décodage pour {path.name}, fallback avec remplacement de caractères.")

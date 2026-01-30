@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import csv
 import re
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterator
+
 from pyproj import Transformer
 
 # Lambert II Carto (NTF Paris) -> WGS84
@@ -122,7 +123,7 @@ def build_segment_index_from_mif_mid(mif_path: Path, mid_path: Path) -> dict[str
     On associe les features MIF aux lignes MID par ordre.
     """
     mid_lines = mid_path.read_text(encoding="utf-8", errors="ignore").splitlines()
-    mid_rows = [_parse_mid_line(l) for l in mid_lines if l.strip()]
+    mid_rows = [_parse_mid_line(line) for line in mid_lines if line.strip()]
     id_col = _guess_id_column(mid_rows)
 
     idx: dict[str, SegmentGeom] = {}

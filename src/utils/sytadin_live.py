@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
-import time
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 
 import requests
-
 
 SYTADIN_EVENEMENTS_URL = "https://www.sytadin.fr/diffusion/xml/evenements.xml"
 

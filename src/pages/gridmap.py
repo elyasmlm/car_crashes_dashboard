@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import dash
+import dash_bootstrap_components as dbc
 import pandas as pd
 from dash import Input, Output, dcc, html
-import dash_bootstrap_components as dbc
-
 from src.components.gridmap.accidents_gridmap import build_grid_map
 from src.utils.data_loader import available_years, load_cleaned_range
-
 
 dash.register_page(__name__, path="/gridmap", name="Carte Interactive")
 YEARS = available_years()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import plotly.express as px
 
+
 def generate_seasons_pie(df: pd.DataFrame):
     """
     Camembert : répartition des accidents par saison (basé sur le mois).
@@ -13,7 +14,7 @@ def generate_seasons_pie(df: pd.DataFrame):
     mois = pd.to_numeric(df["mois"], errors="coerce").dropna().astype(int)
 
     if mois.empty:
-        return px.pie(title=f"Aucune donnée de mois entre 2005 et 2024.")
+        return px.pie(title="Aucune donnée de mois entre 2005 et 2024.")
 
     season_map = {
         12: "Hiver", 1: "Hiver", 2: "Hiver",
@@ -35,7 +36,7 @@ def generate_seasons_pie(df: pd.DataFrame):
         pie_df,
         names="Saison",
         values="Nombre d'accidents",
-        title=f"Répartition des accidents par saison (2005-2024)",
+        title="Répartition des accidents par saison (2005-2024)",
     )
     fig.update_traces(textinfo="percent+label")
     return fig

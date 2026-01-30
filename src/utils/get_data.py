@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import re
 from pathlib import Path
+
 import requests
 
 # params
@@ -41,10 +43,14 @@ def pick_resources(dataset: dict):
                 table = t
                 break
         if not table:
-            if re.search(r"\bcarac", title) or re.search(r"\bcarct", title): table = "caracteristiques"
-            elif re.search(r"\blieu", title): table = "lieux"
-            elif re.search(r"\busag", title): table = "usagers"
-            elif re.search(r"\bveh", title): table = "vehicules"
+            if re.search(r"\bcarac", title) or re.search(r"\bcarct", title): 
+                table = "caracteristiques"
+            elif re.search(r"\blieu", title): 
+                table = "lieux"
+            elif re.search(r"\busag", title): 
+                table = "usagers"
+            elif re.search(r"\bveh", title): 
+                table = "vehicules"
         if not table:
             continue
         out.setdefault(year, {})[table] = res["id"]
