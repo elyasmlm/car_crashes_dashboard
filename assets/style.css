@@ -89,6 +89,36 @@ label, .form-label{
   border-radius: 14px !important;
 }
 
+/* Dropdown text visibility */
+.Select-control{
+  background: rgba(11, 18, 32, 0.9) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.Select-value-label, .Select-placeholder,
+.Select-input, .Select-input > input{
+  color: var(--text) !important;
+}
+
+.Select-menu-outer{
+  background: rgba(11, 18, 32, 0.98) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.Select-option{
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
+.Select-option.is-focused{
+  background: rgba(255,255,255,.10) !important;
+}
+
+.Select-option.is-selected{
+  background: rgba(255,255,255,.16) !important;
+}
+
 .rc-slider{
   margin-top: 10px;
 }
