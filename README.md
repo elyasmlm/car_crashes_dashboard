@@ -24,6 +24,8 @@ Le projet prend la forme d’un dashboard interactif développé en Python, acce
 ```bash
 git clone https://github.com/elyasmlm/car_crashes_dashboard.git
 cd car_crashes_dashboard
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
