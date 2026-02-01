@@ -45,7 +45,7 @@ Carte géolocalisée des accidents en France
 
 Visualisation des zones à forte concentration d’accidents
 
-Localisation de l’accident le plus proche de l’utilisateur à partir de sa position géographique
+Localisation de l’accident le plus proche de l’utilisateur à partir de sa position géographique via les données de Sytadin.
 
 ### Page Analyses statistiques
 #### Histogrammes :
